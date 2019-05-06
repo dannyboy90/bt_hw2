@@ -1,4 +1,3 @@
-//my name is hanan
 //
 // This tool counts the number of times a routine is executed and 
 // the number of instructions executed in a routine
