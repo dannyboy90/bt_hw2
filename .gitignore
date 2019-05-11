@@ -1,0 +1,11 @@
+src/obj-intel64/ex2.o
+src/obj-intel64/ex2.so
+src/tests/loop_test/loop_test
+src/tests/loop_test/loop_testLib.o
+src/tests/loop_test/loop_testMain.o
+src/obj-intel64/ex2.so
+src/obj-intel64/ex2.o
+*.so
+*.o
+*.bin
+*.ipch

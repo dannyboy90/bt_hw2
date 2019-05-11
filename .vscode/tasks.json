@@ -1,0 +1,69 @@
+{
+	// See https://go.microsoft.com/fwlink/?LinkId=733558
+	// for the documentation about the tasks.json format
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Make",
+			"type": "shell",
+			"command": "ssh user@192.168.124.132  'cd /mnt/hgfs/HW/hw2/src && make obj-intel64/ex2.so PIN_ROOT:=/mnt/hgfs/HW/pin-3.7-97619-g0d0c92f4f-gcc-linux && exit'",
+			"group": {
+				"kind": "build",
+				"isDefault": true,
+			}
+		},
+		{
+			"label": "Run tests (loop_test_simple)",
+			"type": "shell",
+			"dependsOn": ["Make","Rebuild loop_test_simple"],
+			"command": "ssh user@192.168.124.132  'time timeout 10s /mnt/hgfs/HW/pin-3.7-97619-g0d0c92f4f-gcc-linux/pin -t /mnt/hgfs/HW/hw2/src/obj-intel64/ex2.so -logfile /mnt/hgfs/HW/hw2/src/ex2.log -- /mnt/hgfs/HW/hw2/src/tests/loop_test_simple/loop_test_simple'",
+		},
+		{
+			"label": "Clean loop_test_simple",
+			"type": "shell",
+			// "dependsOn":"Make",
+			"command": "ssh user@192.168.124.132  'cd /mnt/hgfs/HW/hw2/src/tests/loop_test_simple/ && make clean'",
+		},
+		{
+			"label": "Rebuild loop_test_simple",
+			"type": "shell",
+			"dependsOn": "Clean loop_test_simple",
+			"command": "ssh user@192.168.124.132  'cd /mnt/hgfs/HW/hw2/src/tests/loop_test_simple/ && make'",
+		},
+		{
+			"label": "Run loop_test_simple",
+			"type": "shell",
+			"dependsOn": "Rebuild loop_test_simple",
+			"command": "ssh user@192.168.124.132  '/mnt/hgfs/HW/hw2/src/tests/loop_test_simple/loop_test_simple'",
+		},
+		{
+			"label": "Run tests (loop_test_complex)",
+			"type": "shell",
+			"dependsOn": "Make",
+			"command": "ssh user@192.168.124.132  'time timeout 1s /mnt/hgfs/HW/pin-3.7-97619-g0d0c92f4f-gcc-linux/pin -t /mnt/hgfs/HW/hw2/src/obj-intel64/ex2.so -- /mnt/hgfs/HW/hw2/src/tests/loop_test_complex/loop_test_complex'",
+		},
+		{
+			"label": "Clean loop_test_complex",
+			"type": "shell",
+			"command": "ssh user@192.168.124.132  'cd /mnt/hgfs/HW/hw2/src/tests/loop_test_complex && make clean'",
+		},
+		{
+			"label": "Rebuild loop_test_complex",
+			"type": "shell",
+			"dependsOn": "Clean loop_test_complex",
+			"command": "ssh user@192.168.124.132  'cd /mnt/hgfs/HW/hw2/src/tests/loop_test_complex && make'",
+		},
+		{
+			"label": "Run loop_test_complex",
+			"type": "shell",
+			"dependsOn": "Rebuild loop_test_complex",
+			"command": "ssh user@192.168.124.132  '/mnt/hgfs/HW/hw2/src/tests/loop_test_complex/loop_test_complex'",
+		},
+		{
+			"label": "Run tests (tst)",
+			"type": "shell",
+			"dependsOn": "Make",
+			"command": "ssh user@192.168.124.132  'time timeout 3s /mnt/hgfs/HW/pin-3.7-97619-g0d0c92f4f-gcc-linux/pin -t /mnt/hgfs/HW/hw1/src/obj-intel64/ex1.so -logfile /mnt/hgfs/HW/hw1/src/tests/ex1.log -- /mnt/hgfs/HW/hw1/src/tests/tst'",
+		}
+	]
+}
