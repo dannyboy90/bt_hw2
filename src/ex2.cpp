@@ -129,7 +129,7 @@ VOID Fini(INT32 code, VOID *v) {
 	map<ADDRINT, LOOP_COUNT *>::iterator it;
 	cout << "Found " << LoopMap.size() << " BBLS" << endl;
 	for (it = LoopMap.begin(); it != LoopMap.end(); ++it) {
-		//	Filter out all the unrelated routines, each tested routine must contain TestFunc in its name!a
+		//	Filter out all the unrelated routines, each tested routine must contain TestFunc in its name!
 		currBBL = it->second;
 		// currBBL->_count_loop_invoked+=LoopMap[currBBL->_tail_target_address]->_count_loop_invoked;
 		if (currBBL->_count_seen > 0) {
