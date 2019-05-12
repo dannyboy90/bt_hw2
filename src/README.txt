@@ -22,17 +22,17 @@
 ╚══════╝╚═╝  ╚═╝    ╚══════╝
                             
 
-Submitters - Dani Sulam 302560735 and Hanan Hazani 00000000
+Submitters - Dani Sulam 302560735 and Hanan Hazani 203704424
 
 
 
 
 
 
---- How to compile ex1.so ---
+--- How to compile ex2.so ---
 1. cd path/to/src/
-2. make obj-intel64/ex1.so PIN_ROOT:=/path/to/pin3.7/root
+2. make obj-intel64/ex2.so PIN_ROOT:=/path/to/pin3.7/root
 
 --- How to run the tool ---
 Here is an example of how to run the tool with the ls program:
-/path/to/pin3.7/root/pin -t path/to/ex1.so  -- ls
+/path/to/pin3.7/root/pin -t path/to/ex2.so  -- ls
