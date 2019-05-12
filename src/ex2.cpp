@@ -144,10 +144,10 @@ VOID Trace(TRACE trace, VOID *v) {
 				}
 				INS_InsertCall(bbl_tail, IPOINT_BEFORE, (AFUNPTR)docount, IARG_INST_PTR, IARG_BRANCH_TAKEN,
 				               IARG_FALLTHROUGH_ADDR, IARG_BRANCH_TARGET_ADDR, IARG_PTR, lc, IARG_END);
-				RTN_Open(currRtn);
-				// Insert a call at the entry point of a routine to increment the call count
-				RTN_InsertCall(currRtn, IPOINT_BEFORE, (AFUNPTR)docount2, IARG_PTR, &(lc->_rtnCount), IARG_END);
-				RTN_Close(currRtn);
+				// RTN_Open(currRtn);
+				// // Insert a call at the entry point of a routine to increment the call count
+				// RTN_InsertCall(currRtn, IPOINT_BEFORE, (AFUNPTR)docount2, IARG_PTR, &(lc->_rtnCount), IARG_END);
+				// RTN_Close(currRtn);
 			}
 		}
 	}
