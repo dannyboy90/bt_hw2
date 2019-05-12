@@ -1,3 +1,0 @@
-Loop Target Address     , CountSeen        , CountLoopInvoked   , MeanTaken   , DiffCount   , Routine Name      , Routine Address      , Instructions Count
-0x4006f7, 3, 0, 0, 0, main, 0x4006d8, 0
-0x400707, 3, 0, 0, 0, main, 0x4006d8, 0

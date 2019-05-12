@@ -1,4 +1,3 @@
 Pin: pin-3.7-97619-0d0c92f4f
 Copyright (c) 2003-2018, Intel Corporation. All rights reserved.
-A:  Source/pin/pin/image.cpp: INS_DirectBranchOrCallTargetAddress: 2312: assertion failed: INS_IsDirectBranchOrCall(ins)
-
+E:  RTN_InsertCall is NOT supported from the tool's TRACE or INS instrumentation callback.

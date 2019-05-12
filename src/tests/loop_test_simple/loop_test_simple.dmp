@@ -56,8 +56,8 @@ Disassembly of section .text:
   4005c9:	48 83 e4 f0          	and    $0xfffffffffffffff0,%rsp
   4005cd:	50                   	push   %rax
   4005ce:	54                   	push   %rsp
-  4005cf:	49 c7 c0 e0 07 40 00 	mov    $0x4007e0,%r8
-  4005d6:	48 c7 c1 70 07 40 00 	mov    $0x400770,%rcx
+  4005cf:	49 c7 c0 d0 07 40 00 	mov    $0x4007d0,%r8
+  4005d6:	48 c7 c1 60 07 40 00 	mov    $0x400760,%rcx
   4005dd:	48 c7 c7 d8 06 40 00 	mov    $0x4006d8,%rdi
   4005e4:	e8 97 ff ff ff       	callq  400580 <__libc_start_main@plt>
   4005e9:	f4                   	hlt    
@@ -136,11 +136,14 @@ Disassembly of section .text:
   4006b6:	55                   	push   %rbp
   4006b7:	48 89 e5             	mov    %rsp,%rbp
   4006ba:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+
   4006c1:	83 7d fc 02          	cmpl   $0x2,-0x4(%rbp)
   4006c5:	7f 0a                	jg     4006d1 <_Z15forLoopTestFuncv+0x1b>
+  
   4006c7:	83 45 f8 01          	addl   $0x1,-0x8(%rbp)
   4006cb:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
   4006cf:	eb f0                	jmp    4006c1 <_Z15forLoopTestFuncv+0xb>
+
   4006d1:	b8 00 00 00 00       	mov    $0x0,%eax
   4006d6:	5d                   	pop    %rbp
   4006d7:	c3                   	retq   
@@ -148,104 +151,93 @@ Disassembly of section .text:
 00000000004006d8 <main>:
   4006d8:	55                   	push   %rbp
   4006d9:	48 89 e5             	mov    %rsp,%rbp
-  4006dc:	c7 45 f4 03 00 00 00 	movl   $0x3,-0xc(%rbp)
-  4006e3:	c7 45 f8 03 00 00 00 	movl   $0x3,-0x8(%rbp)
-  4006ea:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+  4006dc:	48 83 ec 10          	sub    $0x10,%rsp
+  4006e0:	c7 45 f4 03 00 00 00 	movl   $0x3,-0xc(%rbp)
+  4006e7:	c7 45 f8 03 00 00 00 	movl   $0x3,-0x8(%rbp)
+  4006ee:	c7 45 fc 00 00 00 00 	movl   $0x0,-0x4(%rbp)
+  4006f5:	e8 bc ff ff ff       	callq  4006b6 <_Z15forLoopTestFuncv>
+  4006fa:	e8 b7 ff ff ff       	callq  4006b6 <_Z15forLoopTestFuncv>
+  4006ff:	e8 b2 ff ff ff       	callq  4006b6 <_Z15forLoopTestFuncv>
+  400704:	b8 00 00 00 00       	mov    $0x0,%eax
+  400709:	c9                   	leaveq 
+  40070a:	c3                   	retq   
 
-  4006f1:	83 7d f4 00          	cmpl   $0x0,-0xc(%rbp)
-  4006f5:	7e 0a                	jle    400701 <main+0x29>
+000000000040070b <_Z41__static_initialization_and_destruction_0ii>:
+  40070b:	55                   	push   %rbp
+  40070c:	48 89 e5             	mov    %rsp,%rbp
+  40070f:	48 83 ec 10          	sub    $0x10,%rsp
+  400713:	89 7d fc             	mov    %edi,-0x4(%rbp)
+  400716:	89 75 f8             	mov    %esi,-0x8(%rbp)
+  400719:	83 7d fc 01          	cmpl   $0x1,-0x4(%rbp)
+  40071d:	75 27                	jne    400746 <_Z41__static_initialization_and_destruction_0ii+0x3b>
+  40071f:	81 7d f8 ff ff 00 00 	cmpl   $0xffff,-0x8(%rbp)
+  400726:	75 1e                	jne    400746 <_Z41__static_initialization_and_destruction_0ii+0x3b>
+  400728:	bf 49 10 60 00       	mov    $0x601049,%edi
+  40072d:	e8 3e fe ff ff       	callq  400570 <_ZNSt8ios_base4InitC1Ev@plt>
+  400732:	ba 40 10 60 00       	mov    $0x601040,%edx
+  400737:	be 49 10 60 00       	mov    $0x601049,%esi
+  40073c:	bf a0 05 40 00       	mov    $0x4005a0,%edi
+  400741:	e8 4a fe ff ff       	callq  400590 <__cxa_atexit@plt>
+  400746:	90                   	nop
+  400747:	c9                   	leaveq 
+  400748:	c3                   	retq   
 
-  4006f7:	83 6d f4 01          	subl   $0x1,-0xc(%rbp)
-  4006fb:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
-  4006ff:	eb f0                	jmp    4006f1 <main+0x19>
+0000000000400749 <_GLOBAL__sub_I__Z15forLoopTestFuncv>:
+  400749:	55                   	push   %rbp
+  40074a:	48 89 e5             	mov    %rsp,%rbp
+  40074d:	be ff ff 00 00       	mov    $0xffff,%esi
+  400752:	bf 01 00 00 00       	mov    $0x1,%edi
+  400757:	e8 af ff ff ff       	callq  40070b <_Z41__static_initialization_and_destruction_0ii>
+  40075c:	5d                   	pop    %rbp
+  40075d:	c3                   	retq   
+  40075e:	66 90                	xchg   %ax,%ax
 
-  400701:	83 7d f8 00          	cmpl   $0x0,-0x8(%rbp)
-  400705:	7e 0a                	jle    400711 <main+0x39>
+0000000000400760 <__libc_csu_init>:
+  400760:	41 57                	push   %r15
+  400762:	41 56                	push   %r14
+  400764:	41 89 ff             	mov    %edi,%r15d
+  400767:	41 55                	push   %r13
+  400769:	41 54                	push   %r12
+  40076b:	4c 8d 25 86 06 20 00 	lea    0x200686(%rip),%r12        # 600df8 <__frame_dummy_init_array_entry>
+  400772:	55                   	push   %rbp
+  400773:	48 8d 2d 8e 06 20 00 	lea    0x20068e(%rip),%rbp        # 600e08 <__init_array_end>
+  40077a:	53                   	push   %rbx
+  40077b:	49 89 f6             	mov    %rsi,%r14
+  40077e:	49 89 d5             	mov    %rdx,%r13
+  400781:	4c 29 e5             	sub    %r12,%rbp
+  400784:	48 83 ec 08          	sub    $0x8,%rsp
+  400788:	48 c1 fd 03          	sar    $0x3,%rbp
+  40078c:	e8 af fd ff ff       	callq  400540 <_init>
+  400791:	48 85 ed             	test   %rbp,%rbp
+  400794:	74 20                	je     4007b6 <__libc_csu_init+0x56>
+  400796:	31 db                	xor    %ebx,%ebx
+  400798:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
+  40079f:	00 
+  4007a0:	4c 89 ea             	mov    %r13,%rdx
+  4007a3:	4c 89 f6             	mov    %r14,%rsi
+  4007a6:	44 89 ff             	mov    %r15d,%edi
+  4007a9:	41 ff 14 dc          	callq  *(%r12,%rbx,8)
+  4007ad:	48 83 c3 01          	add    $0x1,%rbx
+  4007b1:	48 39 eb             	cmp    %rbp,%rbx
+  4007b4:	75 ea                	jne    4007a0 <__libc_csu_init+0x40>
+  4007b6:	48 83 c4 08          	add    $0x8,%rsp
+  4007ba:	5b                   	pop    %rbx
+  4007bb:	5d                   	pop    %rbp
+  4007bc:	41 5c                	pop    %r12
+  4007be:	41 5d                	pop    %r13
+  4007c0:	41 5e                	pop    %r14
+  4007c2:	41 5f                	pop    %r15
+  4007c4:	c3                   	retq   
+  4007c5:	90                   	nop
+  4007c6:	66 2e 0f 1f 84 00 00 	nopw   %cs:0x0(%rax,%rax,1)
+  4007cd:	00 00 00 
 
-  400707:	83 6d f8 01          	subl   $0x1,-0x8(%rbp)
-  40070b:	83 45 fc 01          	addl   $0x1,-0x4(%rbp)
-  40070f:	eb f0                	jmp    400701 <main+0x29>
-  
-  400711:	b8 00 00 00 00       	mov    $0x0,%eax
-  400716:	5d                   	pop    %rbp
-  400717:	c3                   	retq   
-
-0000000000400718 <_Z41__static_initialization_and_destruction_0ii>:
-  400718:	55                   	push   %rbp
-  400719:	48 89 e5             	mov    %rsp,%rbp
-  40071c:	48 83 ec 10          	sub    $0x10,%rsp
-  400720:	89 7d fc             	mov    %edi,-0x4(%rbp)
-  400723:	89 75 f8             	mov    %esi,-0x8(%rbp)
-  400726:	83 7d fc 01          	cmpl   $0x1,-0x4(%rbp)
-  40072a:	75 27                	jne    400753 <_Z41__static_initialization_and_destruction_0ii+0x3b>
-  40072c:	81 7d f8 ff ff 00 00 	cmpl   $0xffff,-0x8(%rbp)
-  400733:	75 1e                	jne    400753 <_Z41__static_initialization_and_destruction_0ii+0x3b>
-  400735:	bf 49 10 60 00       	mov    $0x601049,%edi
-  40073a:	e8 31 fe ff ff       	callq  400570 <_ZNSt8ios_base4InitC1Ev@plt>
-  40073f:	ba 40 10 60 00       	mov    $0x601040,%edx
-  400744:	be 49 10 60 00       	mov    $0x601049,%esi
-  400749:	bf a0 05 40 00       	mov    $0x4005a0,%edi
-  40074e:	e8 3d fe ff ff       	callq  400590 <__cxa_atexit@plt>
-  400753:	90                   	nop
-  400754:	c9                   	leaveq 
-  400755:	c3                   	retq   
-
-0000000000400756 <_GLOBAL__sub_I__Z15forLoopTestFuncv>:
-  400756:	55                   	push   %rbp
-  400757:	48 89 e5             	mov    %rsp,%rbp
-  40075a:	be ff ff 00 00       	mov    $0xffff,%esi
-  40075f:	bf 01 00 00 00       	mov    $0x1,%edi
-  400764:	e8 af ff ff ff       	callq  400718 <_Z41__static_initialization_and_destruction_0ii>
-  400769:	5d                   	pop    %rbp
-  40076a:	c3                   	retq   
-  40076b:	0f 1f 44 00 00       	nopl   0x0(%rax,%rax,1)
-
-0000000000400770 <__libc_csu_init>:
-  400770:	41 57                	push   %r15
-  400772:	41 56                	push   %r14
-  400774:	41 89 ff             	mov    %edi,%r15d
-  400777:	41 55                	push   %r13
-  400779:	41 54                	push   %r12
-  40077b:	4c 8d 25 76 06 20 00 	lea    0x200676(%rip),%r12        # 600df8 <__frame_dummy_init_array_entry>
-  400782:	55                   	push   %rbp
-  400783:	48 8d 2d 7e 06 20 00 	lea    0x20067e(%rip),%rbp        # 600e08 <__init_array_end>
-  40078a:	53                   	push   %rbx
-  40078b:	49 89 f6             	mov    %rsi,%r14
-  40078e:	49 89 d5             	mov    %rdx,%r13
-  400791:	4c 29 e5             	sub    %r12,%rbp
-  400794:	48 83 ec 08          	sub    $0x8,%rsp
-  400798:	48 c1 fd 03          	sar    $0x3,%rbp
-  40079c:	e8 9f fd ff ff       	callq  400540 <_init>
-  4007a1:	48 85 ed             	test   %rbp,%rbp
-  4007a4:	74 20                	je     4007c6 <__libc_csu_init+0x56>
-  4007a6:	31 db                	xor    %ebx,%ebx
-  4007a8:	0f 1f 84 00 00 00 00 	nopl   0x0(%rax,%rax,1)
-  4007af:	00 
-  4007b0:	4c 89 ea             	mov    %r13,%rdx
-  4007b3:	4c 89 f6             	mov    %r14,%rsi
-  4007b6:	44 89 ff             	mov    %r15d,%edi
-  4007b9:	41 ff 14 dc          	callq  *(%r12,%rbx,8)
-  4007bd:	48 83 c3 01          	add    $0x1,%rbx
-  4007c1:	48 39 eb             	cmp    %rbp,%rbx
-  4007c4:	75 ea                	jne    4007b0 <__libc_csu_init+0x40>
-  4007c6:	48 83 c4 08          	add    $0x8,%rsp
-  4007ca:	5b                   	pop    %rbx
-  4007cb:	5d                   	pop    %rbp
-  4007cc:	41 5c                	pop    %r12
-  4007ce:	41 5d                	pop    %r13
-  4007d0:	41 5e                	pop    %r14
-  4007d2:	41 5f                	pop    %r15
-  4007d4:	c3                   	retq   
-  4007d5:	90                   	nop
-  4007d6:	66 2e 0f 1f 84 00 00 	nopw   %cs:0x0(%rax,%rax,1)
-  4007dd:	00 00 00 
-
-00000000004007e0 <__libc_csu_fini>:
-  4007e0:	f3 c3                	repz retq 
+00000000004007d0 <__libc_csu_fini>:
+  4007d0:	f3 c3                	repz retq 
 
 Disassembly of section .fini:
 
-00000000004007e4 <_fini>:
-  4007e4:	48 83 ec 08          	sub    $0x8,%rsp
-  4007e8:	48 83 c4 08          	add    $0x8,%rsp
-  4007ec:	c3                   	retq   
+00000000004007d4 <_fini>:
+  4007d4:	48 83 ec 08          	sub    $0x8,%rsp
+  4007d8:	48 83 c4 08          	add    $0x8,%rsp
+  4007dc:	c3                   	retq   
