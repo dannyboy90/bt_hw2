@@ -1,6 +1,6 @@
 #include <iostream>
 using namespace std;
-#define FOR_ITERARIONS 3
+#define FOR_ITERARIONS 4
 
 int forLoopTestFunc(int iterations) {
 	int a;
@@ -13,21 +13,14 @@ int forLoopTestFunc(int iterations) {
 int main() {
 	int a = FOR_ITERARIONS;
 	int b = FOR_ITERARIONS;
-	int c=1;
-	forLoopTestFunc(1);
-	forLoopTestFunc(2);
-	forLoopTestFunc(3);
+	int c = FOR_ITERARIONS;
+	// forLoopTestFunc(1);
+	// forLoopTestFunc(2);
+	// forLoopTestFunc(2);
 	while (a > 0) {
+		if (a == FOR_ITERARIONS / 2) break;
 		a--;
-		c++;
 	}
-	// while (b > 0) {
-	// 	b--;
-	// 	c++;
-	// }
-	// for(int i=0;i<FOR_ITERARIONS;i++){
-	// 	c++;
-	// }
-	// forLoopTestFunc();
+	cout << "loop_test_simple done!" << endl;
 	return 0;
 }

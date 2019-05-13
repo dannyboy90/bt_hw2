@@ -10,11 +10,15 @@
 #include <iostream>
 #include <map>
 #include "pin.H"
-#define DEBUG(x)  \
+
+#define DEBUG(X) 
+
+
+/* #define DEBUG(x)  \
 	do {             \
 		std::cout << x; \
 	} while (0)
-
+ */
 ofstream outFile;
 
 // Holds information for a simple loop containing a SINGLE bbl
@@ -27,7 +31,7 @@ typedef struct LoopCount {
 	                                     // invocation
 	UINT64 _count_loop_invoked;          //	number of times the loop was invoked
 	UINT64 _mean_taken;                  //	average number of iterations taken for the loop invocations
-	UINT64 _diff_count;  //	number of times that two successive loop invocations took a different number of iterations
+	INT64 _diff_count;  //	number of times that two successive loop invocations took a different number of iterations
 
 	string _rtn_name;
 	ADDRINT _rtn_address;
@@ -38,13 +42,15 @@ typedef struct LoopCount {
 	ADDRINT _head_address;
 	ADDRINT _tail_address;
 	ADDRINT _tail_target_address;
-	ADDRINT _fallthroughAddr;
+	ADDRINT _tailNextAddr;
 	UINT64 _rtnCount;
 	UINT64 _icount;
 
 	struct LoopCount *_next;
 	bool operator<(const LoopCount &str) const { return (_count_seen > str._count_seen); }
 	bool _ends_with_backward_edge;
+	ADDRINT _slave_address;
+
 } LOOP_COUNT;
 // Linked list of instruction counts for each routine
 LOOP_COUNT *LoopList = 0;
@@ -59,34 +65,56 @@ const char *StripPath(const char *path) {
 		return path;
 }
 
-map<ADDRINT, LOOP_COUNT *> LoopMap;
+map<ADDRINT, LOOP_COUNT *> BblMap;            // Mapping from address to corisponding BBL struct
+map<ADDRINT, ADDRINT> LoopCondition2BodyMap;  // Map loop condition (last bbl) to body bbl
+map<ADDRINT, int> RtnCount;
+VOID docount2(UINT64 *counter) { (*counter)++; }
+VOID Routine(RTN rtn, VOID *v) {
+	std::pair<map<ADDRINT, int>::iterator, bool> ret;
+	ret = RtnCount.insert(pair<ADDRINT, int>(RTN_Address(rtn), 0));
+	if (ret.second == false) {
+		cout << "Revisiting the same routine?!" << endl;
+	} else {
+		RTN_Open(rtn);
+
+		// Insert a call at the entry point of a routine to increment the call count
+		RTN_InsertCall(rtn, IPOINT_BEFORE, (AFUNPTR)docount2, IARG_PTR, &(ret.first->second), IARG_END);
+		RTN_Close(rtn);
+	}
+}
 
 // This function is called before every instruction is executed
 VOID docount(VOID *instPtr, INT32 isTaken, VOID *fallthroughAddr, VOID *takenAddr, LOOP_COUNT *lc) {
-	int offset = -(lc->_tail_address - lc->_tail_target_address);
-
-	if (offset < 0) {    //	Backword edge
-		lc->_count_seen++;  //	increases only slave's
+	std::map<ADDRINT, ADDRINT>::iterator C2B_it;
+	if (lc->_ends_with_backward_edge) {  //	Backword edge
+		lc->_count_seen++;                
 		lc->_count_seen_curr_invocation++;
-	} else if (isTaken != 0) {
-		std::map<ADDRINT, LOOP_COUNT *>::iterator it;
-		it = LoopMap.find(lc->_fallthroughAddr);
-		if (it != LoopMap.end()) {
-			LOOP_COUNT *lc_slave = it->second;
-			if (lc_slave->_count_seen_last_invocation != lc_slave->_count_seen_curr_invocation) {
-				lc_slave->_diff_count++;
-			}
-			lc_slave->_count_seen_last_invocation = lc_slave->_count_seen_curr_invocation;
-			lc_slave->_count_seen_curr_invocation = 0;
+		C2B_it = LoopCondition2BodyMap.find(lc->_tail_target_address);
+		if (C2B_it == LoopCondition2BodyMap.end()) {
+			LoopCondition2BodyMap[lc->_tail_target_address] = lc->_head_address;
+			DEBUG("Binding Loop Condition BBL @ " << hex << lc->_tail_target_address << " with Body BBL @ "
+			                                      << lc->_head_address << "LoopCondition2BodyMap size is now "
+			                                      << LoopCondition2BodyMap.size() << endl);
 		}
-		lc->_count_loop_invoked++;  //	increases only master's
+	} else if (isTaken) {  //	if branch is taken and we are escaping the loop
+		C2B_it = LoopCondition2BodyMap.find(lc->_head_address);
+		if (C2B_it != LoopCondition2BodyMap.end()) {
+			ADDRINT body_address = C2B_it->second;
+			std::map<ADDRINT, LOOP_COUNT *>::iterator it;
+			it = BblMap.find(body_address);
+			if (it != BblMap.end()) {  //	if the loop body was executed
+				LOOP_COUNT *lc_body = it->second;
+				DEBUG("DiffCount = " << dec << lc->_diff_count << endl);
+				if (lc->_count_loop_invoked!=0&&lc_body->_count_seen_last_invocation != lc_body->_count_seen_curr_invocation) {
+					lc->_diff_count++;
+				}
+				lc_body->_count_seen_last_invocation = lc_body->_count_seen_curr_invocation;
+				lc_body->_count_seen_curr_invocation = 0;
+			}
+			lc->_count_loop_invoked++;  //	increases only master's
+		}
 	}
-	DEBUG(hex << "head=" << lc->_head_address << " tail=" << lc->_tail_address
-	          << " tail target address=" << lc->_tail_target_address
-	          << " _count_seen_curr_invocation=" << lc->_count_seen_curr_invocation << "_fallthroughAddr"
-	          << lc->_fallthroughAddr << " offset=" << dec << offset << " isTaken=" << isTaken << endl);
 }
-VOID docount2(UINT64 *counter) { (*counter)++; }
 // Pin calls this function every time a new basic block is encountered
 // It inserts a call to docount
 VOID Trace(TRACE trace, VOID *v) {
@@ -97,15 +125,15 @@ VOID Trace(TRACE trace, VOID *v) {
 			string img_name = StripPath(IMG_Name(SEC_Img(RTN_Sec(currRtn))).c_str());
 
 			INS bbl_tail = BBL_InsTail(bbl);
-			if (INS_IsDirectBranch(bbl_tail) && (rtn_name.compare("main") == 0||rtn_name.find("forLoopTestFunc") != string::npos) /* &&
-			    img_name.find("loop_test") != string::npos */) {
+			if (INS_IsDirectBranch(bbl_tail) && (rtn_name.compare("main") == 0||rtn_name.find("forLoopTestFunc") != string::npos)  &&
+			    img_name.find("loop_test") != string::npos) {
 				LOOP_COUNT *lc = new LOOP_COUNT;
 				{
 					lc->_target_address = INS_Address(BBL_InsHead(bbl));
 					lc->_count_seen = 0;
 					lc->_count_loop_invoked = 0;
 					lc->_mean_taken = 0;
-					lc->_diff_count = -1;  //	to offset the first time where there's nothing to compare with last time
+					lc->_diff_count = 0;  //	to offset the first time where there's nothing to compare with last time
 					lc->_rtn_name = RTN_Name(currRtn);
 					lc->_rtn_address = RTN_Address(currRtn);
 					lc->_bbl_image_name = StripPath(IMG_Name(SEC_Img(RTN_Sec(currRtn))).c_str());
@@ -114,7 +142,7 @@ VOID Trace(TRACE trace, VOID *v) {
 					lc->_head_address = INS_Address(BBL_InsHead(bbl));
 					lc->_tail_address = INS_Address(BBL_InsTail(bbl));
 					lc->_tail_target_address = INS_DirectBranchOrCallTargetAddress(lc->_tail);
-					lc->_fallthroughAddr = INS_NextAddress(lc->_tail);
+					lc->_tailNextAddr = INS_NextAddress(lc->_tail);
 					lc->_count_seen_curr_invocation = 0;
 					lc->_count_seen_last_invocation = 0;
 					lc->_rtnCount = 0;
@@ -128,26 +156,20 @@ VOID Trace(TRACE trace, VOID *v) {
 				}
 				std::pair<map<ADDRINT, LOOP_COUNT *>::iterator, bool> ret;
 
-				ret = LoopMap.insert(pair<ADDRINT, LOOP_COUNT *>(lc->_head_address, lc));
+				ret = BblMap.insert(pair<ADDRINT, LOOP_COUNT *>(lc->_head_address, lc));
 
 				if (ret.second == false) {
-					DEBUG("Old LoopBBL encountered (inside routine: "
-					      << lc->_rtn_name << ") Head: 0x" << hex << lc->_head_address << " Tail: 0x" << lc->_tail_address
-					      << "-> 0x" << lc->_tail_target_address << " _ends_with_backward_edge=" << lc->_ends_with_backward_edge
-					      << endl);
+					// DEBUG("Old LoopBBL encountered (inside routine: "
+					//       << lc->_rtn_name << ") H: 0x" << hex << lc->_head_address << " T: 0x" << lc->_tail_address << "-> 0x"
+					//       << lc->_tail_target_address << " _ends_with_backward_edge=" << lc->_ends_with_backward_edge << endl);
 					lc = ret.first->second;
 				} else {
-					DEBUG("New LoopBBL encountered (inside routine: "
-					      << lc->_rtn_name << ") Head: 0x" << hex << lc->_head_address << " Tail: 0x" << lc->_tail_address
-					      << "-> 0x" << lc->_tail_target_address << " _ends_with_backward_edge=" << lc->_ends_with_backward_edge
-					      << endl);
+					// DEBUG("New LoopBBL encountered (inside routine: "
+					//       << lc->_rtn_name << ") H: 0x" << hex << lc->_head_address << " T: 0x" << lc->_tail_address << "-> 0x"
+					//       << lc->_tail_target_address << " _ends_with_backward_edge=" << lc->_ends_with_backward_edge << endl);
 				}
 				INS_InsertCall(bbl_tail, IPOINT_BEFORE, (AFUNPTR)docount, IARG_INST_PTR, IARG_BRANCH_TAKEN,
 				               IARG_FALLTHROUGH_ADDR, IARG_BRANCH_TARGET_ADDR, IARG_PTR, lc, IARG_END);
-				// RTN_Open(currRtn);
-				// // Insert a call at the entry point of a routine to increment the call count
-				// RTN_InsertCall(currRtn, IPOINT_BEFORE, (AFUNPTR)docount2, IARG_PTR, &(lc->_rtnCount), IARG_END);
-				// RTN_Close(currRtn);
 			}
 		}
 	}
@@ -157,19 +179,21 @@ VOID Trace(TRACE trace, VOID *v) {
 // It prints the name and count for each procedure
 VOID Fini(INT32 code, VOID *v) {
 	cout << "---Fini---" << endl;
-	LOOP_COUNT *currBBL;
+	LOOP_COUNT *CondBBL;
+	LOOP_COUNT *BodyBBL;
 	std::vector<LOOP_COUNT> vec;
-	map<ADDRINT, LOOP_COUNT *>::iterator it;
-	cout << "Found " << LoopMap.size() << " BBLS" << endl;
-	for (it = LoopMap.begin(); it != LoopMap.end(); ++it) {
-		//	Filter out all the unrelated routines, each tested routine must contain TestFunc in its name!
-		currBBL = it->second;
-		if (currBBL->_ends_with_backward_edge == false) {
-			DEBUG("Found master bbl with head @ " << hex << currBBL->_head_address << endl);
-			LoopMap[currBBL->_fallthroughAddr]->_count_loop_invoked += currBBL->_count_loop_invoked;
-		} else if (currBBL->_count_seen > 0) {
-			currBBL->_mean_taken = currBBL->_count_seen / currBBL->_count_loop_invoked;
-			vec.push_back(*currBBL);
+	map<ADDRINT, ADDRINT>::iterator it;
+	for (it = LoopCondition2BodyMap.begin(); it != LoopCondition2BodyMap.end(); ++it) {
+		if (BblMap.find(it->first) != BblMap.end()) {
+			CondBBL = BblMap[it->first];
+			BodyBBL = BblMap[it->second];
+			CondBBL->_count_seen = BodyBBL->_count_seen;
+
+			if (CondBBL->_count_loop_invoked != 0) {
+				CondBBL->_mean_taken = CondBBL->_count_seen / CondBBL->_count_loop_invoked;
+			}
+			CondBBL->_rtnCount = RtnCount[CondBBL->_rtn_address];
+			vec.push_back(*CondBBL);
 		}
 	}
 	cout << "Found " << vec.size() << " loops" << endl;
@@ -194,12 +218,11 @@ VOID Fini(INT32 code, VOID *v) {
 	        << "Routine Address      ,"
 	        << " "
 	        //  <<   "Calls             ," << " "
-	        << "Invocations Count" << endl;
+	        << "Routine Invocations Count" << endl;
 	for (std::vector<LOOP_COUNT>::iterator it = vec.begin(); it != vec.end(); ++it) {
 		LOOP_COUNT *lc = &*it;
-		outFile << "0x" << hex << lc->_tail_target_address << dec << ", " << lc->_count_seen << ", "
-		        << lc->_count_loop_invoked << ", " << lc->_mean_taken << ", " << lc->_diff_count << ", " << lc->_rtn_name
-		        << ", "
+		outFile << "0x" << hex << lc->_head_address << dec << ", " << lc->_count_seen << ", " << lc->_count_loop_invoked
+		        << ", " << lc->_mean_taken << ", " << lc->_diff_count << ", " << lc->_rtn_name << ", "
 		        << "0x" << hex << lc->_rtn_address << dec << ", " << lc->_rtnCount << endl;
 	}
 }
@@ -229,7 +252,7 @@ int main(int argc, char *argv[]) {
 	if (PIN_Init(argc, argv)) return Usage();
 
 	// Register Routine to be called to instrument rtn
-	// RTN_AddInstrumentFunction(Routine, 0);
+	RTN_AddInstrumentFunction(Routine, 0);
 
 	// Register Instruction to be called to instrument instructions
 	TRACE_AddInstrumentFunction(Trace, 0);
