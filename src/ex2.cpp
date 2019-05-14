@@ -1,8 +1,14 @@
 
-//
-// This tool counts the number of times a routine is executed and
-// the number of instructions executed in a routine
-//
+/*
+
+This tool collects statistics about loops in a given binary (and shared objects) and output them to a file loop-count.csv
+Definitions:
+A background edge traversal counts as a loop iteration.
+A forward edge (NOT to a follow through BBL of a loop condition BBL) traversal counts as a loop invocation
+
+We do not count invocations where a loop was escaped during its body execution.
+
+*/
 
 #include <string.h>
 #include <fstream>
@@ -11,13 +17,12 @@
 #include <map>
 #include "pin.H"
 
-#define DEBUG(X) 
-
+#define DEBUG(X)
 
 /* #define DEBUG(x)  \
-	do {             \
-		std::cout << x; \
-	} while (0)
+ do {             \
+  std::cout << x; \
+ } while (0)
  */
 ofstream outFile;
 
@@ -72,6 +77,7 @@ VOID docount2(UINT64 *counter) { (*counter)++; }
 VOID Routine(RTN rtn, VOID *v) {
 	std::pair<map<ADDRINT, int>::iterator, bool> ret;
 	ret = RtnCount.insert(pair<ADDRINT, int>(RTN_Address(rtn), 0));
+	
 	if (ret.second == false) {
 		cout << "Revisiting the same routine?!" << endl;
 	} else {
@@ -86,8 +92,9 @@ VOID Routine(RTN rtn, VOID *v) {
 // This function is called before every instruction is executed
 VOID docount(VOID *instPtr, INT32 isTaken, VOID *fallthroughAddr, VOID *takenAddr, LOOP_COUNT *lc) {
 	std::map<ADDRINT, ADDRINT>::iterator C2B_it;
+	// cout<<"Reached insert call for: "<<hex<<lc->_head_address<< "for routine: "<<lc->_rtn_name<<" lc->_tail_target_address = "<<lc->_tail_target_address<<endl; 
 	if (lc->_ends_with_backward_edge) {  //	Backword edge
-		lc->_count_seen++;                
+		lc->_count_seen++;
 		lc->_count_seen_curr_invocation++;
 		C2B_it = LoopCondition2BodyMap.find(lc->_tail_target_address);
 		if (C2B_it == LoopCondition2BodyMap.end()) {
@@ -105,7 +112,8 @@ VOID docount(VOID *instPtr, INT32 isTaken, VOID *fallthroughAddr, VOID *takenAdd
 			if (it != BblMap.end()) {  //	if the loop body was executed
 				LOOP_COUNT *lc_body = it->second;
 				DEBUG("DiffCount = " << dec << lc->_diff_count << endl);
-				if (lc->_count_loop_invoked!=0&&lc_body->_count_seen_last_invocation != lc_body->_count_seen_curr_invocation) {
+				if (lc->_count_loop_invoked != 0 &&
+				    lc_body->_count_seen_last_invocation != lc_body->_count_seen_curr_invocation) {
 					lc->_diff_count++;
 				}
 				lc_body->_count_seen_last_invocation = lc_body->_count_seen_curr_invocation;
@@ -125,22 +133,21 @@ VOID Trace(TRACE trace, VOID *v) {
 			string img_name = StripPath(IMG_Name(SEC_Img(RTN_Sec(currRtn))).c_str());
 
 			INS bbl_tail = BBL_InsTail(bbl);
-			if (INS_IsDirectBranch(bbl_tail) && (rtn_name.compare("main") == 0||rtn_name.find("forLoopTestFunc") != string::npos)  &&
-			    img_name.find("loop_test") != string::npos) {
+			if (INS_IsDirectBranch(bbl_tail) &&  rtn_name.find("pthread") == string::npos) { //Doesn't work in pthread libs
 				LOOP_COUNT *lc = new LOOP_COUNT;
 				{
-					lc->_target_address = INS_Address(BBL_InsHead(bbl));
+					lc->_head = BBL_InsHead(bbl);
+					lc->_tail = bbl_tail;
+					lc->_target_address = INS_Address(lc->_head);
 					lc->_count_seen = 0;
 					lc->_count_loop_invoked = 0;
 					lc->_mean_taken = 0;
 					lc->_diff_count = 0;  //	to offset the first time where there's nothing to compare with last time
-					lc->_rtn_name = RTN_Name(currRtn);
+					lc->_rtn_name = rtn_name;
 					lc->_rtn_address = RTN_Address(currRtn);
-					lc->_bbl_image_name = StripPath(IMG_Name(SEC_Img(RTN_Sec(currRtn))).c_str());
-					lc->_head = BBL_InsHead(bbl);
-					lc->_tail = BBL_InsTail(bbl);
-					lc->_head_address = INS_Address(BBL_InsHead(bbl));
-					lc->_tail_address = INS_Address(BBL_InsTail(bbl));
+					lc->_bbl_image_name = img_name;
+					lc->_head_address = INS_Address(lc->_head);
+					lc->_tail_address = INS_Address(bbl_tail);
 					lc->_tail_target_address = INS_DirectBranchOrCallTargetAddress(lc->_tail);
 					lc->_tailNextAddr = INS_NextAddress(lc->_tail);
 					lc->_count_seen_curr_invocation = 0;
@@ -168,6 +175,7 @@ VOID Trace(TRACE trace, VOID *v) {
 					//       << lc->_rtn_name << ") H: 0x" << hex << lc->_head_address << " T: 0x" << lc->_tail_address << "-> 0x"
 					//       << lc->_tail_target_address << " _ends_with_backward_edge=" << lc->_ends_with_backward_edge << endl);
 				}
+				
 				INS_InsertCall(bbl_tail, IPOINT_BEFORE, (AFUNPTR)docount, IARG_INST_PTR, IARG_BRANCH_TAKEN,
 				               IARG_FALLTHROUGH_ADDR, IARG_BRANCH_TARGET_ADDR, IARG_PTR, lc, IARG_END);
 			}
@@ -178,7 +186,6 @@ VOID Trace(TRACE trace, VOID *v) {
 // This function is called when the application exits
 // It prints the name and count for each procedure
 VOID Fini(INT32 code, VOID *v) {
-	cout << "---Fini---" << endl;
 	LOOP_COUNT *CondBBL;
 	LOOP_COUNT *BodyBBL;
 	std::vector<LOOP_COUNT> vec;
@@ -196,7 +203,6 @@ VOID Fini(INT32 code, VOID *v) {
 			vec.push_back(*CondBBL);
 		}
 	}
-	cout << "Found " << vec.size() << " loops" << endl;
 	std::sort(vec.begin(), vec.end());
 
 	//	0x<image 1 address>, <image 1 name> , 0x<routine 1 address>, <routine 1 name> , <instructions count of routine
